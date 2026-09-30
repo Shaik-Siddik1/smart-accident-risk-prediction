@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<title>Smart Vehicle Accident Risk Prediction</title>
+<style>
+  body { font-family: Arial, sans-serif; background: #eef2f7; margin: 0; padding: 20px; }
+  .box { max-width: 700px; margin: auto; background: white; padding: 25px; border-radius: 10px; }
+  h1 { font-size: 22px; text-align: center; }
+  .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+  label { font-size: 14px; display: block; margin-bottom: 3px; }
+  input[type=number], select { width: 100%; padding: 7px; box-sizing: border-box; }
+  .checks label { display: inline-block; margin-right: 15px; }
+  button { width: 100%; padding: 12px; margin-top: 18px; font-size: 16px;
+           background: #1a56db; color: white; border: none; border-radius: 6px; cursor: pointer; }
+  #result { margin-top: 20px; padding: 18px; text-align: center; font-size: 22px;
+            border-radius: 8px; display: none; color: white; }
+  table { width: 100%; border-collapse: collapse; margin-top: 25px; font-size: 13px; }
+  th, td { border: 1px solid #ccc; padding: 5px; text-align: center; }
+  th { background: #f0f0f0; }
+</style>
+</head>
+<body>
+<div class="box">
+  <h1>Smart Vehicle Accident Risk Prediction</h1>
+
+  <div class="grid">
+    <div><label>Hour (0-23)</label><input type="number" id="hour" value="18" min="0" max="23"></div>
+    <div><label>Month (1-12)</label><input type="number" id="month" value="12" min="1" max="12"></div>
+    <div><label>Temperature (°F)</label><input type="number" id="temperature" value="50"></div>
+    <div><label>Humidity (%)</label><input type="number" id="humidity" value="70"></div>
+    <div><label>Visibility (miles)</label><input type="number" id="visibility" value="10"></div>
+    <div><label>Wind speed (mph)</label><input type="number" id="wind_speed" value="5"></div>
+    <div><label>Precipitation (inches)</label><input type="number" step="0.01" id="precipitation" value="0"></div>
+    <div><label>Weather</label>
+      <select id="weather">
+        <option>Clear</option><option>Cloudy</option><option>Rain</option>
+        <option>Snow</option><option>Fog</option><option>Other</option>
+      </select>
+    </div>
+  </div>
+
+  <div class="checks" style="margin-top:15px;">
+    <label><input type="checkbox" id="junction"> Junction</label>
+    <label><input type="checkbox" id="crossing"> Crossing</label>
+    <label><input type="checkbox" id="traffic_signal"> Traffic signal</label>
+    <label><input type="checkbox" id="stop"> Stop sign</label>
+    <label><input type="checkbox" id="railway"> Railway</label>
+  </div>
+
+  <button onclick="predict()">Predict Risk</button>
+  <div id="result"></div>
+
+  <h3>Recent predictions</h3>
+  <table>
+    <thead><tr><th>Time</th><th>Hour</th><th>Weather</th><th>Temp</th><th>Risk</th><th>Conf %</th></tr></thead>
+    <tbody id="history"></tbody>
+  </table>
+</div>
+
+<script>
+function val(id) { return document.getElementById(id).value; }
+function chk(id) { return document.getElementById(id).checked ? 1 : 0; }
+
+async function predict() {
+  const data = {
+    hour: val("hour"), month: val("month"), temperature: val("temperature"),
+    humidity: val("humidity"), visibility: val("visibility"),
+    wind_speed: val("wind_speed"), precipitation: val("precipitation"),
+    weather: val("weather"), junction: chk("junction"), crossing: chk("crossing"),
+    traffic_signal: chk("traffic_signal"), stop: chk("stop"), railway: chk("railway")
+  };
+  const res = await fetch("/predict", {
+    method: "POST",
+    headers: {"Content-Type": "application/json"},
+    body: JSON.stringify(data)
+  });
+  const out = await res.json();
+  const box = document.getElementById("result");
+  const colors = {Low: "#16a34a", Medium: "#f59e0b", High: "#dc2626"};
+  box.style.display = "block";
+  box.style.background = colors[out.risk];
+  box.innerHTML = out.risk + " Risk<br><small>Confidence: " + out.confidence + "%</small>";
+  loadHistory();
+}
+
+async function loadHistory() {
+  const res = await fetch("/history");
+  const rows = await res.json();
+  document.getElementById("history").innerHTML = rows.map(r =>
+    "<tr><td>" + r.created_at + "</td><td>" + r.hour + "</td><td>" + r.weather +
+    "</td><td>" + r.temperature + "</td><td>" + r.risk + "</td><td>" + r.confidence + "</td></tr>"
+  ).join("");
+}
+loadHistory();
+</script>
+</body>
+</html>

@@ -1,0 +1,5 @@
+risk.db
+predictions.db
+accident_data.csv
+__pycache__/
+*.pyc
